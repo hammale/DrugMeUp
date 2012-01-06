@@ -1,0 +1,8 @@
+name: DrugMeUp
+main: me.hammale.drugs.drugs
+version: 1.0
+author: hammale
+commands:
+  drunk:
+    description:
+    usage: "'/drunk'"

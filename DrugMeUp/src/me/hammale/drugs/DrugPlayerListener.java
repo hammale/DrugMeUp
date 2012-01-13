@@ -9,6 +9,7 @@ import org.bukkit.block.BlockFace;
 import org.bukkit.craftbukkit.entity.CraftPlayer;
 import org.bukkit.entity.Player;
 import org.bukkit.event.block.Action;
+import org.bukkit.event.player.PlayerChatEvent;
 import org.bukkit.event.player.PlayerInteractEvent;
 import org.bukkit.event.player.PlayerListener;
 import org.bukkit.event.player.PlayerMoveEvent;
@@ -26,21 +27,33 @@ public class DrugPlayerListener extends PlayerListener {
       this.plugin = plugin;
     }
     
+    public void onPlayerChat(PlayerChatEvent e){
+    	if(plugin.onDrugs.contains(e.getPlayer().getName())){
+    		String initial = e.getMessage();
+    		String end = scramble(initial);
+    		e.setMessage(end);
+    	}
+    }
+    
 	public void onPlayerInteract(PlayerInteractEvent event) {
 		Player player = event.getPlayer();
-		ItemStack stack = event.getItem();
-		if(event.getAction() == Action.RIGHT_CLICK_AIR){
-		if (stack != null)
-		{
-			if (stack.getTypeId() == 353)
-			{
-					plugin.assignEffect(player);
-					doPortal(event.getPlayer());
-			}
-	}
-}		
+		if(player.hasPermission("drugs.use")) {
+			ItemStack stack = event.getItem();
+			if(event.getAction() == Action.RIGHT_CLICK_AIR){
+				if (stack != null){
+					if (player.isSneaking()){
+						if(plugin.getId(stack.getTypeId()) != 0){
+							player.getInventory().removeItem(new ItemStack (stack.getType(), 1));
+							plugin.assignEffect(player, stack.getTypeId());
+						}
+					}	
+				}
+			}		
+		}	
 }
+	
 	public void onPlayerMove(final PlayerMoveEvent e) {
+		
 //		if(plugin.drunk.contains(e.getPlayer().getName())){
 //			//Vector dir1 = Direction.NORTH;
 //			int gap = gen.nextInt(5);
@@ -69,6 +82,7 @@ public class DrugPlayerListener extends PlayerListener {
 				      Vector v = new Vector(dir.getX() * val, 0D, 0D);
 				      e.getPlayer().setVelocity(v);
 				      doSlow(e.getPlayer());
+				      doPortal(e.getPlayer());
 				}     
 			}
 	}
@@ -79,11 +93,16 @@ public class DrugPlayerListener extends PlayerListener {
 		if(ran <= 300){
 			ran = 300;
 		}
-		cp.getHandle().addEffect(new MobEffect(9, ran, 20));
+		int power = gen.nextInt(1000);
+		if(power <= 100){
+			power = 100;
+		}
+		cp.getHandle().addEffect(new MobEffect(9, ran, power));
 		plugin.getServer().getScheduler().scheduleSyncDelayedTask(plugin, new Runnable() {
 
 		    public void run() {
 		        plugin.drunk.remove(p.getName());
+		        plugin.onDrugs.remove(p.getName());
 		    }
 		}, ran);
 	}
@@ -108,5 +127,23 @@ public class DrugPlayerListener extends PlayerListener {
 		      p.setVelocity(v);
 		} 
 	}
+	
+    public String scramble(String word) {
+        StringBuilder builder = new StringBuilder(word.length());
+        boolean[] used = new boolean[word.length()];
+       
+        for (int i = 0; i < word.length(); i++) {
+            int rndIndex;
+            do {
+                rndIndex = new Random().nextInt(word.length());
+            } while (used[rndIndex]);
+            used[rndIndex] = true;
+               
+            builder.append(word.charAt(rndIndex));
+        }
+        return builder.toString();
+    } 
+
+
 	
 }

@@ -5,4 +5,12 @@ author: hammale
 commands:
   drunk:
     description:
-    usage: "'/drunk'"
+    usage: "Incorrect usage. '/drunk <args>'"
+permissions:
+    drugs.*:
+        description: Gives access to all DrugMeUp features
+        children:
+            drugs.use: true
+    drugs.use:
+        description: Allows users to do drugs
+        default: op    

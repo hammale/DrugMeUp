@@ -1,11 +1,11 @@
 name: DrugMeUp
 main: me.hammale.drugs.drugs
 version: 1.0
-author: hammale
+author: hammale, gaz492, Giinger
 commands:
-  drunk:
+  drugmeup:
     description:
-    usage: "Incorrect usage. '/drunk <args>'"
+    usage: "Incorrect usage. '/drugmeup reload'"
 permissions:
     drugs.*:
         description: Gives access to all DrugMeUp features
@@ -13,4 +13,7 @@ permissions:
             drugs.use: true
     drugs.use:
         description: Allows users to do drugs
+        default: op    
+    drugs.reload:
+        description: Reloads the config
         default: op    

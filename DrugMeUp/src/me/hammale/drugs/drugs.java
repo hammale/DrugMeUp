@@ -1,8 +1,9 @@
 package me.hammale.drugs;
 
 import java.io.File;
+import java.util.ArrayList;
+import java.util.Random;
 import java.util.logging.Logger;
-import java.util.*;
 
 import net.minecraft.server.MobEffect;
 
@@ -15,350 +16,318 @@ import org.bukkit.command.CommandSender;
 import org.bukkit.configuration.file.FileConfiguration;
 import org.bukkit.craftbukkit.entity.CraftPlayer;
 import org.bukkit.entity.Player;
-import org.bukkit.event.Event;
-import org.bukkit.event.Event.Priority;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.plugin.PluginDescriptionFile;
 import org.bukkit.plugin.PluginManager;
 import org.bukkit.plugin.java.JavaPlugin;
 
 public class drugs extends JavaPlugin {
-	
-	  public FileConfiguration config;
-	
-	  Random gen = new Random();
-	  
-	  public ArrayList<String> drunk = new ArrayList<String>();	  
-	  public ArrayList<String> onDrugs = new ArrayList<String>();
+	public FileConfiguration config;
+	Random gen = new Random();
 
-	  private final DrugPlayerListener playerListener = new DrugPlayerListener(this);
-	  private final DrugEntityListener entityListener = new DrugEntityListener(this);
-	  
-	  Logger log = Logger.getLogger("Minecraft");
-	
-	@Override
+	public ArrayList<String> drunk = new ArrayList<String>();
+	public static ArrayList<String> onDrugs = new ArrayList<String>();
+
+	Logger log = Logger.getLogger("Minecraft");
+
 	public void onEnable() {
+		PluginDescriptionFile pdfFile = getDescription();
 
-		PluginDescriptionFile pdfFile = this.getDescription();
-		
 		log.info("[DrugMeUp] " + pdfFile.getVersion() + " Enabled!");
-		
+
 		PluginManager pm = getServer().getPluginManager();
-		pm.registerEvent(Event.Type.PLAYER_INTERACT, playerListener, Priority.Normal, this);
-		pm.registerEvent(Event.Type.PLAYER_MOVE, playerListener, Priority.Normal, this);
-		pm.registerEvent(Event.Type.ENTITY_DEATH, entityListener, Priority.Normal, this);
-		pm.registerEvent(Event.Type.PLAYER_CHAT, playerListener, Priority.Normal, this);
+		pm.registerEvents(new DrugsPlayerListener(this), this);
+		pm.registerEvents(new DrugsEntityListener(this), this);
+		pm.registerEvents(new DrugsBlockListener(this), this);
 		loadConfiguration();
 	}
-	
-	@Override
+
 	public void onDisable() {
-		
-		PluginDescriptionFile pdfFile = this.getDescription();
-		
+		PluginDescriptionFile pdfFile = getDescription();
+
 		log.info("[DrugMeUp] " + pdfFile.getVersion() + " Disabled!");
-		
 	}
 
-	public void loadConfiguration(){
-	    if(exists() == false){
-		    config = getConfig();
-		    config.options().copyDefaults(false);   
-		    String path1 = "DrugIds.353.Effect";
-		    String path2 = "DrugIds.351.Effect";
-		    String path3 = "DrugIds.40.Effect";
-		    
-		    config.addDefault(path1, 9);
-		    config.addDefault(path2, 9);
-		    config.addDefault(path3, 9);
-		    config.options().copyDefaults(true);
-		    saveConfig();
-	    }
-	}
-	
-	private boolean exists() {	
-			try{
-			File file = new File("plugins/DrugMeUp/config.yml"); 
-	        if (file.exists()) { 
-	        	return true;
-	        }else{
-	        	return false;
-	        }
+	public void loadConfiguration() {
+		if (!exists()) {
+			config = getConfig();
+			config.options().copyDefaults(false);
+			String path1 = "DrugIds.353.Effect";
+			String path2 = "DrugIds.351:0.Effect";
+			String path3 = "DrugIds.40.Effect";
+			String path5 = "chat.broadcast.Burning";
+			String path6 = "chat.broadcast.Death";
+			String path7 = "chat.broadcast.Puke";
+			String path8 = "chat.broadcast.OnDrugs";
 
-			}catch (Exception e){
-			  System.err.println("Error: " + e.getMessage());
-			  return true;
-			}
+			config.addDefault(path1, Integer.valueOf(8));
+			config.addDefault(path2, Integer.valueOf(8));
+			config.addDefault(path3, Integer.valueOf(8));
+			config.addDefault(path5, "Bursts into flames");
+			config.addDefault(path6, "OD'd - Don't do drugs kids!");
+			config.addDefault(path7, "Violently pukes his guts out");
+			config.addDefault(path8, "Aww yeah buddy!");
+
+			config.options().copyDefaults(true);
+
+			saveConfig();
+		}
 	}
 
-	public int getEffect(int id){
-	    config = getConfig();
-	    int amnt = config.getInt("DrugIds." + id + "." + "Effect"); 
-	    return amnt;
+	private boolean exists() {
+		try {
+			File file = new File("plugins/DrugMeUp/config.yml");
+
+			return file.exists();
+		} catch (Exception e) {
+			System.err.println("Error: " + e.getMessage());
+		}
+		return true;
 	}
-	
-	public int getId(int id){
-	    config = getConfig();
-	    int amnt = config.getInt("DrugIds." + id + ".Effect");
-	    return amnt;
+
+	public int getEffect(int id, int damage) {
+		config = getConfig();
+		int amnt;
+		if (damage != 0) {
+			amnt = config.getInt("DrugIds." + id + ":" + damage + ".Effect");
+		} else {
+			amnt = config.getInt("DrugIds." + id + ".Effect");
+		}
+		return amnt;
 	}
-	
-	  public boolean onCommand(final CommandSender sender, Command cmd, String commandLabel, String[] args){
-			if(cmd.getName().equalsIgnoreCase("drunk")){
-					if(args.length == 0){
-						return false;
-					}
-					if(args[0].equalsIgnoreCase("reload")){
+
+	public boolean onCommand(CommandSender sender, Command cmd,
+			String commandLabel, String[] args) {
+		if (cmd.getName().equalsIgnoreCase("drugmeup")) {
+			if (sender.hasPermission("drugs.reload")) {
+				if (args.length == 1) {
+					if (args[0].equalsIgnoreCase("reload")) {
 						reloadConfig();
-						if(sender instanceof Player){
-							sender.sendMessage(ChatColor.GREEN + "DrugMeUp Reloaded!");
-							return true;
-						}else{
-							sender.sendMessage("[DrugMeUp] Reloaded!");
+						if ((sender instanceof Player)) {
+							sender.sendMessage(ChatColor.GREEN
+									+ "DrugMeUp Reloaded!");
 							return true;
 						}
+						sender.sendMessage("[DrugMeUp] Reloaded!");
+						return true;
 					}
-					return false;
-			}
-			return false;
-		}			
-	
-	public void walkWeird(Player p) {
-		
-		drunk.add(p.getName());
-		
+				} else
+					sender.sendMessage(ChatColor.DARK_RED
+							+ "Invalid Arguments!");
+				return false;
+			} else
+				sender.sendMessage(ChatColor.DARK_RED
+						+ "You don't have permission!");
+		}
+		return false;
 	}
-	
+
+	public void walkWeird(Player p) {
+		drunk.add(p.getName());
+	}
+
 	public void walkSlow(final Player p) {
-		
 		CraftPlayer cp = (CraftPlayer) p;
 		int power = gen.nextInt(100);
-		if(power <= 10){
+		if (power <= 10) {
 			power = 10;
 		}
 		int ran = gen.nextInt(1000);
-		if(ran <= 300){
+		if (ran <= 300) {
 			ran = 300;
 		}
 		cp.getHandle().addEffect(new MobEffect(2, ran, power));
-		getServer().getScheduler().scheduleSyncDelayedTask(this, new Runnable() {
-
-		    public void run() {
-				onDrugs.remove(p.getName());
-		    }
-		}, ran);
+		getServer().getScheduler().scheduleSyncDelayedTask(this,
+				new Runnable() {
+					public void run() {
+						drugs.onDrugs.remove(p.getName());
+					}
+				}, ran);
 	}
-	
+
 	public void walkFast(final Player p) {
-		
 		CraftPlayer cp = (CraftPlayer) p;
 		int power = gen.nextInt(100);
-		if(power <= 10){
+		if (power <= 10) {
 			power = 10;
 		}
 		int ran = gen.nextInt(1000);
-		if(ran <= 300){
+		if (ran <= 300) {
 			ran = 300;
 		}
 		cp.getHandle().addEffect(new MobEffect(1, ran, power));
-		getServer().getScheduler().scheduleSyncDelayedTask(this, new Runnable() {
-
-		    public void run() {
-				onDrugs.remove(p.getName());
-		    }
-		}, ran);
-	}
-	
-	public void supaStrength(final Player p) {
-		
-		CraftPlayer cp = (CraftPlayer) p;
-		int power = gen.nextInt(1000);
-		if(power <= 100){
-			power = 100;
-		}
-		int ran = gen.nextInt(1000);
-		if(ran <= 300){
-			ran = 300;
-		}
-		cp.getHandle().addEffect(new MobEffect(5, ran, power));
-		cp.getHandle().addEffect(new MobEffect(3, ran, power));
-		cp.getHandle().addEffect(new MobEffect(11, ran, power));
-		getServer().getScheduler().scheduleSyncDelayedTask(this, new Runnable() {
-
-		    public void run() {
-				onDrugs.remove(p.getName());
-		    }
-		}, ran);
+		getServer().getScheduler().scheduleSyncDelayedTask(this,
+				new Runnable() {
+					public void run() {
+						drugs.onDrugs.remove(p.getName());
+					}
+				}, ran);
 	}
 
 	public void blindMe(final Player p) {
-		
 		CraftPlayer cp = (CraftPlayer) p;
 		int power = gen.nextInt(1000);
-		if(power <= 100){
+		if (power <= 100) {
 			power = 100;
 		}
 		int ran = gen.nextInt(1000);
-		if(ran <= 300){
+		if (ran <= 300) {
 			ran = 300;
 		}
 		cp.getHandle().addEffect(new MobEffect(15, ran, power));
-		getServer().getScheduler().scheduleSyncDelayedTask(this, new Runnable() {
-
-		    public void run() {
-				onDrugs.remove(p.getName());
-		    }
-		}, ran);
+		p.canSee(p);
+		getServer().getScheduler().scheduleSyncDelayedTask(this,
+				new Runnable() {
+					public void run() {
+						drugs.onDrugs.remove(p.getName());
+					}
+				}, ran);
 	}
-	
+
 	public void soHungry(final Player p) {
-		
 		CraftPlayer cp = (CraftPlayer) p;
 		int power = gen.nextInt(1000);
-		if(power <= 100){
+		if (power <= 100) {
 			power = 100;
 		}
 		int ran = gen.nextInt(1000);
-		if(ran <= 300){
+		if (ran <= 300) {
 			ran = 300;
 		}
 		cp.getHandle().addEffect(new MobEffect(17, ran, power));
-		getServer().getScheduler().scheduleSyncDelayedTask(this, new Runnable() {
-
-		    public void run() {
-				onDrugs.remove(p.getName());
-		    }
-		}, ran);
+		getServer().getScheduler().scheduleSyncDelayedTask(this,
+				new Runnable() {
+					public void run() {
+						drugs.onDrugs.remove(p.getName());
+					}
+				}, ran);
 	}
-	
+
 	public void soSick(final Player p) {
-		
 		CraftPlayer cp = (CraftPlayer) p;
 		int power = gen.nextInt(1000);
-		if(power <= 100){
+		if (power <= 100) {
 			power = 100;
 		}
 		int ran = gen.nextInt(1000);
-		if(ran <= 300){
+		if (ran <= 300) {
 			ran = 300;
 		}
 		cp.getHandle().addEffect(new MobEffect(4, ran, power));
-		cp.getHandle().addEffect(new MobEffect(18, ran, power));	
+		cp.getHandle().addEffect(new MobEffect(18, ran, power));
 		cp.getHandle().addEffect(new MobEffect(19, ran, power));
-		getServer().getScheduler().scheduleSyncDelayedTask(this, new Runnable() {
-
-		    public void run() {
-				onDrugs.remove(p.getName());
-		    }
-		}, ran);
+		getServer().getScheduler().scheduleSyncDelayedTask(this,
+				new Runnable() {
+					public void run() {
+						drugs.onDrugs.remove(p.getName());
+					}
+				}, ran);
 	}
-	
+
 	public void feelingJumpy(final Player p) {
-		
 		CraftPlayer cp = (CraftPlayer) p;
 		int power = gen.nextInt(15);
 		int ran = gen.nextInt(1000);
-		if(ran <= 300){
+		if (ran <= 300) {
 			ran = 300;
 		}
 		cp.getHandle().addEffect(new MobEffect(8, ran, power));
-		
-		getServer().getScheduler().scheduleSyncDelayedTask(this, new Runnable() {
 
-		    public void run() {
-				onDrugs.remove(p.getName());
-		    }
-		}, ran);
+		getServer().getScheduler().scheduleSyncDelayedTask(this,
+				new Runnable() {
+					public void run() {
+						drugs.onDrugs.remove(p.getName());
+					}
+				}, ran);
 	}
-	
+
 	public void torchYa(Player p) {
-		getServer().broadcastMessage(ChatColor.RED + "* " + p.getName() + " bursts into flames");
+		String hot = config.getString("chat.broadcast.Burning");
+		getServer().broadcastMessage(ChatColor.RED + p.getName() + " " + hot);
 		final Block b = p.getLocation().getBlock();
 		b.setTypeId(51);
-		getServer().getScheduler().scheduleSyncDelayedTask(this, new Runnable() {
-		    public void run() {
-				b.setTypeId(0);
-		    }
-		}, 5);
-		
+		getServer().getScheduler().scheduleSyncDelayedTask(this,
+				new Runnable() {
+					public void run() {
+						b.setTypeId(0);
+					}
+				}, 5L);
 	}
-	
+
 	public void youOd(Player p) {
+		String death = config.getString("chat.broadcast.Death");
 		p.damage(10000);
-		getServer().broadcastMessage(ChatColor.GREEN + p.getName() + " OD'd! " + ChatColor.RED + "DON'T DO DRUGS KIDS!");
+		getServer().broadcastMessage(ChatColor.RED + p.getName() + " " + death);
 		onDrugs.remove(p.getName());
 	}
-	
+
 	@SuppressWarnings("deprecation")
 	public void pukeInv(Player p) {
-		getServer().broadcastMessage(ChatColor.GREEN + "* " + p.getName() + " violently pukes his guts out");
+		String puke = config.getString("chat.broadcast.Puke");
+		getServer().broadcastMessage(
+				ChatColor.GREEN + "* " + p.getName() + " " + puke);
 		ItemStack[] i = p.getInventory().getContents();
-		Location l = p.getLocation().getBlock().getRelative(BlockFace.NORTH, 3).getLocation();
+		Location l = p.getLocation().getBlock().getRelative(BlockFace.NORTH, 3)
+				.getLocation();
 		p.getInventory().clear();
-		p.updateInventory();
-		for(ItemStack item:i){
-			if(item != null){
+		for (ItemStack item : i) {
+			if (item != null) {
 				p.getWorld().dropItemNaturally(l, item);
 				p.updateInventory();
 			}
 		}
 		p.updateInventory();
 	}
-	
-	public void assignEffect(Player p, int i) {
+
+	public void assignEffect(Player p, int i, int dmg) {
+		String ond = config.getString("chat.broadcast.OnDrugs");
 		onDrugs.add(p.getName());
-		p.sendMessage("Aww yeah buddy!");
-		int effect = getEffect(i);
-		if(effect == 1){
+		p.sendMessage(ond);
+		int effect = getEffect(i, dmg);
+		if (effect == 1) {
 			walkWeird(p);
-		}else if(effect == 2){
+		} else if (effect == 2) {
 			walkSlow(p);
-		}else if(effect == 3){
+		} else if (effect == 3) {
 			walkFast(p);
-		}else if(effect == 4){
-			supaStrength(p);
-		}else if(effect == 5){
+		} else if (effect == 4) {
 			blindMe(p);
-		}else if(effect == 6){
+		} else if (effect == 5) {
 			soHungry(p);
-		}else if(effect == 7){
+		} else if (effect == 6) {
 			soSick(p);
-		}else if(effect == 8){
+		} else if (effect == 7) {
 			feelingJumpy(p);
-		}else if(effect == 9){
-			int ran = gen.nextInt(7);			
-			if(ran == 0){
+		} else if (effect == 8) {
+			int ran = gen.nextInt(6);
+			if (ran == 0)
 				walkWeird(p);
-			}else if(ran == 1){
+			else if (ran == 1)
 				walkSlow(p);
-			}else if(ran == 2){
+			else if (ran == 2)
 				walkFast(p);
-			}else if(ran == 3){
-				supaStrength(p);
-			}else if(ran == 4){
+			else if (ran == 3)
 				blindMe(p);
-			}else if(ran == 5){
+			else if (ran == 4)
 				soHungry(p);
-			}else if(ran == 6){
+			else if (ran == 5)
 				feelingJumpy(p);
-			}else if(ran == 6){
+			else if (ran == 6) {
 				soSick(p);
 			}
 		}
 		int ran1 = gen.nextInt(50);
-		if(ran1 >= 45){
+		if (ran1 >= 45) {
 			torchYa(p);
 		}
-		if(ran1 <= 2){
+		if (ran1 <= 2) {
 			youOd(p);
 		}
-		if(ran1 >= 25){
+		if (ran1 >= 25) {
 			int power = gen.nextInt(15);
 			p.damage(power);
 		}
-		if(ran1 >= 30 && ran1 < 35){
+		if ((ran1 >= 30) && (ran1 < 35))
 			pukeInv(p);
-		}
 	}
-
 }

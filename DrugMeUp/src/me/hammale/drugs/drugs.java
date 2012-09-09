@@ -279,12 +279,8 @@ public class drugs extends JavaPlugin {
 		p.updateInventory();
 	}
 
-	public void assignEffect(Player p, int i, int dmg) {
-		String ond = config.getString("chat.broadcast.OnDrugs");
-		onDrugs.add(p.getName());
-		p.sendMessage(ond);
-		int effect = getEffect(i, dmg);
-		if (effect == 1) {
+        public void doEffect(Player p, int effect) {
+            	if (effect == 1) {
 			walkWeird(p);
 		} else if (effect == 2) {
 			walkSlow(p);
@@ -298,24 +294,19 @@ public class drugs extends JavaPlugin {
 			soSick(p);
 		} else if (effect == 7) {
 			feelingJumpy(p);
-		} else if (effect == 8) {
-			int ran = gen.nextInt(6);
-			if (ran == 0)
-				walkWeird(p);
-			else if (ran == 1)
-				walkSlow(p);
-			else if (ran == 2)
-				walkFast(p);
-			else if (ran == 3)
-				blindMe(p);
-			else if (ran == 4)
-				soHungry(p);
-			else if (ran == 5)
-				feelingJumpy(p);
-			else if (ran == 6) {
-				soSick(p);
-			}
-		}
+                }
+        }
+        
+	public void assignEffect(Player p, int i, int dmg) {
+		String ond = config.getString("chat.broadcast.OnDrugs");
+		onDrugs.add(p.getName());
+		p.sendMessage(ond);
+		int effect = getEffect(i, dmg);
+                if(effect != 8) {
+                        doEffect(p, effect);
+                } else {
+                        doEffect(p, gen.nextInt(6) + 1);
+                }
 		int ran1 = gen.nextInt(50);
 		if (ran1 >= 45) {
 			torchYa(p);
@@ -324,10 +315,14 @@ public class drugs extends JavaPlugin {
 			youOd(p);
 		}
 		if (ran1 >= 25) {
-			int power = gen.nextInt(15);
+			int power = gen.nextInt(15) + 1;
 			p.damage(power);
 		}
-		if ((ran1 >= 30) && (ran1 < 35))
+		if ((ran1 >= 30) && (ran1 < 35)) {
 			pukeInv(p);
+                }
+                if (ran1 == 10) {
+                        doEffect(p, gen.nextInt(6) + 1);
+                }
 	}
 }

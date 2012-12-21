@@ -2,11 +2,11 @@ package me.hammale.drugs;
 
 import java.util.Random;
 
-import net.minecraft.server.MobEffect;
+import net.minecraft.server.v1_4_5.MobEffect;
 
 import org.bukkit.block.Block;
 import org.bukkit.block.BlockFace;
-import org.bukkit.craftbukkit.entity.CraftPlayer;
+import org.bukkit.craftbukkit.v1_4_5.entity.CraftPlayer;
 import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
